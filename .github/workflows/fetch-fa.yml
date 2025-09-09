@@ -1,1 +1,46 @@
+name: Fetch FA Full-Time JSON (fixtures, results, table)
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "*/30 6-23 * * *"   # every 30 min between 06:00–23:59 UTC
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check repository
+        uses: actions/checkout@v3
+
+      - name: Set up python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4
+
+      - name: Run fetcher
+        env:
+          # ↓↓↓ set THESE three to your live LR codes (fixtures / results / table)
+          FA_FIXTURES_LRCODE: "455713059"
+          FA_RESULTS_LRCODE:  "577104452"
+          FA_TABLE_LRCODE:    "577104452"
+        run: |
+          python .github/scripts/fa_fetch.py
+
+      - name: Commit JSON if changed
+        run: |
+          git config user.name  "fa-bot"
+          git config user.email "fa-bot@users.noreply.github.com"
+          git add data/fixtures.json data/results.json data/table.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Update FA JSON"
+            git push
+          else
+            echo "✅ No changes to commit"
+          fi
 
